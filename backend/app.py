@@ -1008,202 +1008,202 @@
 # if __name__ == "__main__":
 #     # debug only for development - do not use debug=True in production
 #     app.run(host="0.0.0.0", port=5000, debug=True)
-# # app.py
-# import os
-# import traceback
-# from pathlib import Path
-# from uuid import uuid4
-# from datetime import datetime
+# app.py
+import os
+import traceback
+from pathlib import Path
+from uuid import uuid4
+from datetime import datetime
 
-# from flask import Flask, request, jsonify
-# from flask_cors import CORS
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
-# import pickle
-# import joblib
-# import numpy as np
-# import pandas as pd
-# import re
-# import fitz  # PyMuPDF
-# from sklearn.ensemble import RandomForestClassifier, GradientBoostingRegressor
-# from sklearn.preprocessing import LabelEncoder
-# from sklearn.model_selection import train_test_split
-# from sklearn.metrics import accuracy_score, r2_score
+import pickle
+import joblib
+import numpy as np
+import pandas as pd
+import re
+import fitz  # PyMuPDF
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingRegressor
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, r2_score
 
-# # ------------------- Paths & Directories ------------------- #
-# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# MODELS_DIR = os.path.join(BASE_DIR, "models")
-# INPUT_DIR = os.path.join(BASE_DIR, "input")
-# DATA_PATH = os.path.join(BASE_DIR, "backend", "supply_chain_dataset_learnable.csv")  # adjust if needed
+# ------------------- Paths & Directories ------------------- #
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODELS_DIR = os.path.join(BASE_DIR, "models")
+INPUT_DIR = os.path.join(BASE_DIR, "input")
+DATA_PATH = os.path.join(BASE_DIR, "backend", "supply_chain_dataset_learnable.csv")  # adjust if needed
 
-# os.makedirs(MODELS_DIR, exist_ok=True)
-# os.makedirs(INPUT_DIR, exist_ok=True)
+os.makedirs(MODELS_DIR, exist_ok=True)
+os.makedirs(INPUT_DIR, exist_ok=True)
 
-# # ------------------- Flask Setup ------------------- #
-# app = Flask(__name__)
-# CORS(app)
+# ------------------- Flask Setup ------------------- #
+app = Flask(__name__)
+CORS(app)
 
-# # ------------------- Helpers ------------------- #
-# def load_pickle(path):
-#     with open(path, "rb") as f:
-#         return pickle.load(f)
+# ------------------- Helpers ------------------- #
+def load_pickle(path):
+    with open(path, "rb") as f:
+        return pickle.load(f)
 
-# def safe_joblib_load(path):
-#     try:
-#         return joblib.load(path)
-#     except Exception as e:
-#         app.logger.error(f"joblib load error {path}: {e}")
-#         return None
+def safe_joblib_load(path):
+    try:
+        return joblib.load(path)
+    except Exception as e:
+        app.logger.error(f"joblib load error {path}: {e}")
+        return None
 
-# # ------------------- Policy & Contract Models ------------------- #
-# try:
-#     policy_model_path = os.path.join(MODELS_DIR, "policy_predictor.pkl")
-#     policy_model = load_pickle(policy_model_path) if os.path.exists(policy_model_path) else None
-# except Exception as e:
-#     policy_model = None
+# ------------------- Policy & Contract Models ------------------- #
+try:
+    policy_model_path = os.path.join(MODELS_DIR, "policy_predictor.pkl")
+    policy_model = load_pickle(policy_model_path) if os.path.exists(policy_model_path) else None
+except Exception as e:
+    policy_model = None
 
-# try:
-#     feature_names_path = os.path.join(MODELS_DIR, "feature_names.pkl")
-#     feature_names = load_pickle(feature_names_path) if os.path.exists(feature_names_path) else []
-# except Exception as e:
-#     feature_names = []
+try:
+    feature_names_path = os.path.join(MODELS_DIR, "feature_names.pkl")
+    feature_names = load_pickle(feature_names_path) if os.path.exists(feature_names_path) else []
+except Exception as e:
+    feature_names = []
 
-# # Contract Analyzer models
-# risk_score_model = safe_joblib_load(os.path.join(MODELS_DIR, "risk_score_regressor.pkl"))
-# risk_level_model = safe_joblib_load(os.path.join(MODELS_DIR, "risk_level_classifier.pkl"))
+# Contract Analyzer models
+risk_score_model = safe_joblib_load(os.path.join(MODELS_DIR, "risk_score_regressor.pkl"))
+risk_level_model = safe_joblib_load(os.path.join(MODELS_DIR, "risk_level_classifier.pkl"))
 
-# # ------------------- Contract Extraction Helpers ------------------- #
-# RISK_KEYWORDS = [
-#     "penalty", "breach", "liability", "risk", "exposure", "termination",
-#     "confidential", "trade secret", "non-disclosure", "disclosure"
-# ]
+# ------------------- Contract Extraction Helpers ------------------- #
+RISK_KEYWORDS = [
+    "penalty", "breach", "liability", "risk", "exposure", "termination",
+    "confidential", "trade secret", "non-disclosure", "disclosure"
+]
 
-# def read_pdf_text(file_path: str) -> str:
-#     doc = fitz.open(file_path)
-#     return "".join(page.get_text() for page in doc)
+def read_pdf_text(file_path: str) -> str:
+    doc = fitz.open(file_path)
+    return "".join(page.get_text() for page in doc)
 
-# def extract_features_from_text(text: str) -> dict:
-#     duration_match = re.search(r"Duration[:\-]?\s*(\d+)\s*days", text, re.IGNORECASE)
-#     if not duration_match:
-#         dates = re.findall(r"(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", text)
-#         if len(dates) >= 2:
-#             try:
-#                 start = pd.to_datetime(dates[0])
-#                 end = pd.to_datetime(dates[1])
-#                 duration_days = int((end - start).days)
-#             except:
-#                 duration_days = 0
-#         else:
-#             duration_days = 0
-#     else:
-#         duration_days = int(duration_match.group(1))
+def extract_features_from_text(text: str) -> dict:
+    duration_match = re.search(r"Duration[:\-]?\s*(\d+)\s*days", text, re.IGNORECASE)
+    if not duration_match:
+        dates = re.findall(r"(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", text)
+        if len(dates) >= 2:
+            try:
+                start = pd.to_datetime(dates[0])
+                end = pd.to_datetime(dates[1])
+                duration_days = int((end - start).days)
+            except:
+                duration_days = 0
+        else:
+            duration_days = 0
+    else:
+        duration_days = int(duration_match.group(1))
 
-#     clauses = re.findall(r"\n\d+\.\s", text)
-#     obligations = re.findall(r"\b(shall|must|agree to)\b", text, re.IGNORECASE)
-#     cv_match = re.search(r"(?:Contract Value|contract value).*?([\d,]+\.\d+)", text, re.IGNORECASE)
-#     pr_match = re.search(r"penalty.*?([\d.,]+)%", text, re.IGNORECASE)
-#     risk_count = sum(1 for kw in RISK_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", text, re.IGNORECASE))
+    clauses = re.findall(r"\n\d+\.\s", text)
+    obligations = re.findall(r"\b(shall|must|agree to)\b", text, re.IGNORECASE)
+    cv_match = re.search(r"(?:Contract Value|contract value).*?([\d,]+\.\d+)", text, re.IGNORECASE)
+    pr_match = re.search(r"penalty.*?([\d.,]+)%", text, re.IGNORECASE)
+    risk_count = sum(1 for kw in RISK_KEYWORDS if re.search(r"\b" + re.escape(kw) + r"\b", text, re.IGNORECASE))
 
-#     contract_value = float(cv_match.group(1).replace(",", "")) if cv_match else 0.0
-#     penalty_rate = float(pr_match.group(1).replace(",", "")) / 100.0 if pr_match else 0.0
+    contract_value = float(cv_match.group(1).replace(",", "")) if cv_match else 0.0
+    penalty_rate = float(pr_match.group(1).replace(",", "")) / 100.0 if pr_match else 0.0
 
-#     compliance_score = 80
-#     renewal_term_months = 12
-#     days_to_expiry = max(duration_days - 30, 0)
-#     financial_exposure = contract_value * 0.1 if contract_value > 0 else 0.0
-#     breach_probability = min(risk_count * 0.1, 1.0)
+    compliance_score = 80
+    renewal_term_months = 12
+    days_to_expiry = max(duration_days - 30, 0)
+    financial_exposure = contract_value * 0.1 if contract_value > 0 else 0.0
+    breach_probability = min(risk_count * 0.1, 1.0)
 
-#     return {
-#         "Duration_Days": duration_days,
-#         "Contract_Value": contract_value,
-#         "Penalty_Rate": penalty_rate,
-#         "Num_Clauses": len(clauses),
-#         "Num_Obligations": len(obligations),
-#         "Risk_Keywords": risk_count,
-#         "Compliance_Score": compliance_score,
-#         "Renewal_Term_Months": renewal_term_months,
-#         "Days_to_Expiry": days_to_expiry,
-#         "Financial_Exposure": financial_exposure,
-#         "Breach_Probability": breach_probability,
-#         "Region": "LATAM",
-#         "Contract_Type": "NDA",
-#         "Is_Compliant": 1
-#     }
+    return {
+        "Duration_Days": duration_days,
+        "Contract_Value": contract_value,
+        "Penalty_Rate": penalty_rate,
+        "Num_Clauses": len(clauses),
+        "Num_Obligations": len(obligations),
+        "Risk_Keywords": risk_count,
+        "Compliance_Score": compliance_score,
+        "Renewal_Term_Months": renewal_term_months,
+        "Days_to_Expiry": days_to_expiry,
+        "Financial_Exposure": financial_exposure,
+        "Breach_Probability": breach_probability,
+        "Region": "LATAM",
+        "Contract_Type": "NDA",
+        "Is_Compliant": 1
+    }
 
-# def features_to_dataframe(features: dict) -> pd.DataFrame:
-#     df = pd.DataFrame([features])
-#     cols = [
-#         "Region", "Contract_Type", "Duration_Days", "Contract_Value", "Penalty_Rate",
-#         "Num_Clauses", "Num_Obligations", "Risk_Keywords", "Compliance_Score",
-#         "Renewal_Term_Months", "Days_to_Expiry", "Financial_Exposure", "Breach_Probability", "Is_Compliant"
-#     ]
-#     for c in cols:
-#         if c not in df.columns:
-#             df[c] = 0
-#     return df[cols]
+def features_to_dataframe(features: dict) -> pd.DataFrame:
+    df = pd.DataFrame([features])
+    cols = [
+        "Region", "Contract_Type", "Duration_Days", "Contract_Value", "Penalty_Rate",
+        "Num_Clauses", "Num_Obligations", "Risk_Keywords", "Compliance_Score",
+        "Renewal_Term_Months", "Days_to_Expiry", "Financial_Exposure", "Breach_Probability", "Is_Compliant"
+    ]
+    for c in cols:
+        if c not in df.columns:
+            df[c] = 0
+    return df[cols]
 
-# def generate_summary(features: dict, risk_score: float, risk_level: str) -> str:
-#     summary = f"""
-# This contract spans {features['Duration_Days']} days with {features['Num_Clauses']} clauses and {features['Num_Obligations']} obligations.
-# The total contract value is estimated at {features['Contract_Value']:.2f} AED with a penalty rate of {features['Penalty_Rate']:.2%}.
-# Financial exposure is calculated at {features['Financial_Exposure']:.2f} AED.
-# Risk analysis detected {features['Risk_Keywords']} key risk factors.
-# Overall Risk Score predicted by the model is {risk_score:.2f}, corresponding to a risk level of '{risk_level}'.
-# Compliance score is approximately {features['Compliance_Score']}.
-# This summary is intended to give a quick understanding of the contract's risk and obligations.
-# """
-#     return " ".join(line.strip() for line in summary.strip().split("\n"))
+def generate_summary(features: dict, risk_score: float, risk_level: str) -> str:
+    summary = f"""
+This contract spans {features['Duration_Days']} days with {features['Num_Clauses']} clauses and {features['Num_Obligations']} obligations.
+The total contract value is estimated at {features['Contract_Value']:.2f} AED with a penalty rate of {features['Penalty_Rate']:.2%}.
+Financial exposure is calculated at {features['Financial_Exposure']:.2f} AED.
+Risk analysis detected {features['Risk_Keywords']} key risk factors.
+Overall Risk Score predicted by the model is {risk_score:.2f}, corresponding to a risk level of '{risk_level}'.
+Compliance score is approximately {features['Compliance_Score']}.
+This summary is intended to give a quick understanding of the contract's risk and obligations.
+"""
+    return " ".join(line.strip() for line in summary.strip().split("\n"))
 
-# # ------------------- Supply Chain Model ------------------- #
-# def calculate_stockout_probability(stock_level, inventory_threshold):
-#     return round(max(0.0, (inventory_threshold - stock_level) / max(1, inventory_threshold)), 2)
+# ------------------- Supply Chain Model ------------------- #
+def calculate_stockout_probability(stock_level, inventory_threshold):
+    return round(max(0.0, (inventory_threshold - stock_level) / max(1, inventory_threshold)), 2)
 
-# def calculate_reorder_quantity(stock_level, inventory_threshold, safety_stock=20):
-#     return int(max(0, inventory_threshold - stock_level + safety_stock))
+def calculate_reorder_quantity(stock_level, inventory_threshold, safety_stock=20):
+    return int(max(0, inventory_threshold - stock_level + safety_stock))
 
-# def calculate_total_cost(order_quantity, cost_per_unit, delay_probability=0.0, delay_penalty_per_day=10):
-#     return order_quantity * cost_per_unit + delay_probability * delay_penalty_per_day
+def calculate_total_cost(order_quantity, cost_per_unit, delay_probability=0.0, delay_penalty_per_day=10):
+    return order_quantity * cost_per_unit + delay_probability * delay_penalty_per_day
 
-# def generate_summary_supply(pred_df):
-#     summaries = []
-#     for _, row in pred_df.iterrows():
-#         delay_risk = row.get('Delay_Probability', 0.0) * 100
-#         stockout = row.get('Stockout_Probability', 0.0)
-#         reorder_qty = int(row.get('Recommended_Reorder_Qty', 0))
-#         total_cost = row.get('Total_Cost_Impact', 0.0)
-#         order_id = int(row.get('Order_ID', -1))
+def generate_summary_supply(pred_df):
+    summaries = []
+    for _, row in pred_df.iterrows():
+        delay_risk = row.get('Delay_Probability', 0.0) * 100
+        stockout = row.get('Stockout_Probability', 0.0)
+        reorder_qty = int(row.get('Recommended_Reorder_Qty', 0))
+        total_cost = row.get('Total_Cost_Impact', 0.0)
+        order_id = int(row.get('Order_ID', -1))
 
-#         delay_msg = (
-#             "On track" if delay_risk < 10 else
-#             "Moderate risk of delay" if delay_risk < 50 else
-#             "High delay risk"
-#         )
-#         stock_msg = (
-#             "Inventory sufficient" if stockout == 0 else
-#             "Slight stock pressure" if stockout < 0.4 else
-#             "Critical stock shortage"
-#         )
-#         cost_msg = (
-#             "Minimal cost impact" if total_cost < 50000 else
-#             "Moderate cost impact" if total_cost < 100000 else
-#             "High cost impact"
-#         )
-#         summary = f"Order {order_id}: Delay {delay_msg}, Stock {stock_msg}, Cost {cost_msg}"
-#         summaries.append(summary)
-#     return summaries
+        delay_msg = (
+            "On track" if delay_risk < 10 else
+            "Moderate risk of delay" if delay_risk < 50 else
+            "High delay risk"
+        )
+        stock_msg = (
+            "Inventory sufficient" if stockout == 0 else
+            "Slight stock pressure" if stockout < 0.4 else
+            "Critical stock shortage"
+        )
+        cost_msg = (
+            "Minimal cost impact" if total_cost < 50000 else
+            "Moderate cost impact" if total_cost < 100000 else
+            "High cost impact"
+        )
+        summary = f"Order {order_id}: Delay {delay_msg}, Stock {stock_msg}, Cost {cost_msg}"
+        summaries.append(summary)
+    return summaries
 
-# class SupplyChainModel:
-#     def __init__(self):
-#         self.delay_model = None
-#         self.delay_days_model = None
-#         self.encoder_supplier = LabelEncoder()
-#         self.encoder_product = LabelEncoder()
-#         self.load_models()
+class SupplyChainModel:
+    def __init__(self):
+        self.delay_model = None
+        self.delay_days_model = None
+        self.encoder_supplier = LabelEncoder()
+        self.encoder_product = LabelEncoder()
+        self.load_models()
 
-#     def preprocess(self, df, fit_encoders=False):
-#         df = df.copy()
-#         for c in ['Supplier', 'Product_SKU']:
-#             if c not in df.columns:
-#                 df[c] = "UNKNOWN"
-#         if fit_encoders:
-#             self.encoder_supplier.fit(df['Supplier'].astype(str))
-#             self.encoder_product
+    def preprocess(self, df, fit_encoders=False):
+        df = df.copy()
+        for c in ['Supplier', 'Product_SKU']:
+            if c not in df.columns:
+                df[c] = "UNKNOWN"
+        if fit_encoders:
+            self.encoder_supplier.fit(df['Supplier'].astype(str))
+            self.encoder_product

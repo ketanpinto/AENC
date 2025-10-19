@@ -1,8 +1,20 @@
+"use client"
+
 import { DashboardHeader } from "@/components/dashboard-header"
 import { FeatureCards } from "@/components/feature-cards"
 import { VideoBackground } from "@/components/video-background"
+import { useRef } from "react"
 
 export default function Home() {
+  const featureCardsRef = useRef<HTMLDivElement>(null)
+
+  const scrollToFeatures = () => {
+    featureCardsRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    })
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden">
       <VideoBackground />
@@ -29,17 +41,19 @@ export default function Home() {
                 aspect of your enterprise operations.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-4">
-                <button className="glass-effect rounded-2xl border border-glass-border px-8 py-4 font-semibold text-foreground shadow-xl backdrop-blur-xl transition-all hover:scale-105 hover:shadow-2xl">
+                <button 
+                  onClick={scrollToFeatures}
+                  className="glass-effect rounded-2xl border border-glass-border px-8 py-4 font-semibold text-foreground shadow-xl backdrop-blur-xl transition-all hover:scale-105 hover:shadow-2xl"
+                >
                   Get Started
-                </button>
-                <button className="rounded-2xl border border-glass-border bg-transparent px-8 py-4 font-semibold text-foreground backdrop-blur-xl transition-all hover:bg-glass-bg hover:scale-105">
-                  Watch Demo
                 </button>
               </div>
             </div>
 
             {/* Feature Cards */}
-            <FeatureCards />
+            <div ref={featureCardsRef}>
+              <FeatureCards />
+            </div>
           </div>
         </div>
       </div>
